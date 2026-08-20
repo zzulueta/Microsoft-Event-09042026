@@ -93,7 +93,7 @@ print(f"Assistant: {response.output_text}\n")
 
 # Follow-up turn in the same conversation
 print("=" * 60)
-print("STEP 3-5: TURN 2 (Generate & Retrieve)")
+print("STEP 3: TURN 2 (Generate & Retrieve)")
 print("=" * 60)
 follow_up = openai.responses.create(
     conversation=conversation.id,  # Same conversation ID maintains context
@@ -111,7 +111,7 @@ print(f"Assistant: {follow_up.output_text}\n")
 
 # Third turn with a calculation request
 print("=" * 60)
-print("STEP 3-5: TURN 3 (Generate & Retrieve - with tool use)")
+print("STEP 3: TURN 3 (Generate & Retrieve - with tool use)")
 print("=" * 60)
 calculation = openai.responses.create(
     conversation=conversation.id,  # Context from all previous turns
@@ -129,7 +129,7 @@ print(f"Assistant: {calculation.output_text}\n")
 
 # Fourth turn: analyze the uploaded Sales.xlsx file
 print("=" * 60)
-print("STEP 3-5: TURN 4 (Generate & Retrieve - Sales file insights)")
+print("STEP 3: TURN 4 (Generate & Retrieve - Sales file insights)")
 print("=" * 60)
 sales_prompt = (
     "Using the uploaded Sales.xlsx file, analyze the data with code interpreter "

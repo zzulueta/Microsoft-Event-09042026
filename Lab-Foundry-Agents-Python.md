@@ -206,7 +206,7 @@ By the end of this lab, you will have:
 
 ## Step 5: Create and Use an Agent Programmatically with Python
 
-In this step, you'll learn how to create and use a conversation with your agent programmatically using Python.
+In this step, you'll learn how to create an agent programmatically using the Azure AI Projects SDK for Python, and then use it to have a multi-turn conversation.
 
 ### 5.1 Create and Use a Conversation
 1. In VS Code, create a new Python file:
@@ -293,7 +293,7 @@ print("This maintains history across all turns automatically.\n")
 
 # First turn
 print("=" * 60)
-print("STEP 3-5: TURN 1 (Generate & Retrieve)")
+print("STEP 3: TURN 1 (Generate & Retrieve)")
 print("=" * 60)
 response = openai.responses.create(
     conversation=conversation.id,  # Pass conversation ID
@@ -311,7 +311,7 @@ print(f"Assistant: {response.output_text}\n")
 
 # Follow-up turn in the same conversation
 print("=" * 60)
-print("STEP 3-5: TURN 2 (Generate & Retrieve)")
+print("STEP 3: TURN 2 (Generate & Retrieve)")
 print("=" * 60)
 follow_up = openai.responses.create(
     conversation=conversation.id,  # Same conversation ID maintains context
@@ -329,7 +329,7 @@ print(f"Assistant: {follow_up.output_text}\n")
 
 # Third turn with a calculation request
 print("=" * 60)
-print("STEP 3-5: TURN 3 (Generate & Retrieve - with tool use)")
+print("STEP 3: TURN 3 (Generate & Retrieve - with tool use)")
 print("=" * 60)
 calculation = openai.responses.create(
     conversation=conversation.id,  # Context from all previous turns
@@ -382,18 +382,18 @@ print("=" * 60)
 ### 6.1 Publish Your Agent
 1. In the Foundry Portal, select **Build**.
 2. Select **Agents** and navigate to your agent (`python-multitool-agent`)
-3. Select **Publish** in the upper right.
-4. Copy the **Endpoint (Responses)** endpoint URL
-   - Format: `https://foundry-python-<yourname>.services.ai.azure.com/api/projects/python-agents-project/agents/python-multitool-agent/endpoint/protocols/openai/v1/responses`
+3. Select **Details** tab.
+4. Copy the **Endpoint** endpoint URL
+   - Format: `https://<projectname>.services.ai.azure.com/api/projects/<projectname>/agents/python-multitool-agent/endpoint/protocols/openai/responses`
 5. Update your `.env` file to add the BASE_URL:
    ```powershell
    code .env
    ```
 6. Add this line to your `.env` file with your actual endpoint:
    ```
-   BASE_URL="https://foundry-python-<yourname>.services.ai.azure.com/api/projects/python-agents-project/agents/python-multitool-agent/endpoint/protocols/openai"
+   BASE_URL="https://<projectname>.services.ai.azure.com/api/projects/<projectname>/agents/python-multitool-agent/endpoint/protocols/openai"
    ```
-   > **Important:** The `BASE_URL` should stop before `/v1/responses` because the OpenAI SDK will append that path internally when making requests.
+   > **Important:** The `BASE_URL` should stop before `/responses` because the OpenAI SDK will append that path internally when making requests.
 7. Save with `Ctrl+S`
 
 ### 6.2 Call Published Agent (Streaming)
@@ -467,7 +467,7 @@ curl.exe -i --fail-with-body -X POST `
   -H "Foundry-Features: AgentEndpoints=V1Preview" `
   -d '{"input": "What are the benefits of using Microsoft Foundry?"}'
 ```
-> Note: Remove `/v1/responses` from the BASE_URL when using it in the cURL command, as the path is included in the command itself.
+> Note: Remove `/responses` from the BASE_URL when using it in the cURL command, as the path is included in the command itself.
 > **macOS/Linux (or Git Bash/WSL):** use `curl` instead of `curl.exe`, replace the backtick (`` ` ``) line-continuations with `\`, and set the token with `TOKEN=$(az account get-access-token --resource https://ai.azure.com --query accessToken -o tsv)`.
 
 Sample:
@@ -500,25 +500,16 @@ In this lab, you successfully:
 2. ✅ Created an AI agent in the Foundry Portal with custom instructions
 3. ✅ Tested the agent with web search and code interpreter tools
 4. ✅ Set up a local Python environment in VS Code with required Azure SDK packages
-5. ✅ **Mastered the 5-step agent workflow pattern:**
-   - Step 1: Create an agent
-   - Step 2: Create a conversation (optional)
-   - Step 3: Generate a response
-   - Step 4: Check response status
-   - Step 5: Retrieve the response
-6. ✅ Created and used agents programmatically with Python
-7. ✅ Demonstrated both context management approaches (`previous_response_id` and `conversations`)
-8. ✅ Created multi-tool agents with Web Search and Code Interpreter
-9. ✅ Monitored tool execution status and inspected outputs
-10. ✅ Implemented streaming responses with status monitoring
-11. ✅ Published agent and consumed it via OpenAI SDK
+5. ✅ Created multi-tool agents with Web Search and Code Interpreter
+6. ✅ Monitored tool execution status and inspected outputs
+7. ✅ Published agent and consumed it via OpenAI SDK
 
 ### Key Concepts
 
 **Agent Runtime Workflow:**
 - **Step 1**: Create agents with instructions and tools
 - **Step 2**: Use conversations for context
-- **Steps 3-5**: Generate → Check Status → Retrieve pattern for all interactions
+- **Steps 3**: Generate → Retrieve pattern for all interactions
 - **Streaming**: Monitor event types and status throughout the stream
 
 **Agent Creation Patterns:**
