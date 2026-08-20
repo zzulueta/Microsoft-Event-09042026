@@ -30,7 +30,7 @@ By the end of this lab, you will have:
 
 ### 1.2 Deploy a Model for Your Agent
 1. In Microsoft Foundry, navigate to **Build** in the top navigation
-2. Select **Models** from the left sidebar
+2. Select **Models** or **Deployments** from the left sidebar
 3. Click **Deploy a base model**
 4. Search for the **gpt-5.4** model
 5. **Select** the model
@@ -57,7 +57,7 @@ By the end of this lab, you will have:
 
 ### 2.1 Navigate to Agent Builder
 1. In Microsoft Foundry Portal, navigate to **Build** > **Agents** in the left sidebar
-2. Click **Create agent**
+2. Click **New agent** > **Build an agent**
 
 ### 2.2 Configure Agent Basics
 1. On the **Create an agent** page:
@@ -90,6 +90,8 @@ By the end of this lab, you will have:
 2. Verify that **Web search** is available. Web search should be enabled by default for new agents. If not, click **Add** and enable Web search.
 3. Click **Add** to enable the **Code interpreter** tool.
 4. Verify that both tools are listed under the agent's tools.
+5. Click **+ Files** in the Code interpreter and browse and upload the Sales.xlsx file.
+6. Select **Attach**.
 
 ### 2.5 Save Your Agent
 1. Click **Save** in the upper right corner
@@ -119,12 +121,12 @@ By the end of this lab, you will have:
 ### 3.3 Test Code Interpreter
 1. Ask a question that requires code execution:
    ```
-   Calculate the factorial of 10 and show me the Python code
+   Provide me insights from the Sales.xlsx file I uploaded.
    ```
 2. Verify the agent executes code and provides the result
 
-### 3.4 Review Agent Logs
-1. Click on the **Logs** at the bottom
+### 3.4 Review Agent Traces
+1. Click on the **Traces** at the bottom
 2. Review the tool calls performed (web search and code interpreter)
 
 ---
@@ -134,7 +136,7 @@ By the end of this lab, you will have:
 ### 4.1 Open VS Code and a Terminal
 1. Launch **Visual Studio Code**
 2. Select **File** > **Open Folder...** and choose (or create) a folder for this lab
-3. Open the integrated terminal with **Terminal** > **New Terminal** (or press `` Ctrl+` ``)
+3. Open the integrated terminal with **Terminal** > **New Terminal**
 4. On Windows, the terminal opens in **PowerShell** by default, which the commands below assume
 
 > **Note:** VS Code's integrated terminal gives you the `code` command for editing files and a full-featured editor, so you can create, run, and debug your Python scripts all in one place.
@@ -165,12 +167,10 @@ By the end of this lab, you will have:
 - ✅ Makes your environment reproducible
 - ✅ Allows different Python package versions per project
 
-> **Tip:** Press `Ctrl+Shift+P`, run **Python: Select Interpreter**, and choose the `agentenv` environment so VS Code uses it when running and debugging your scripts.
-
 ### 4.4 Install Required Packages
 1. Install the Azure AI Projects SDK (with virtual environment activated):
    ```powershell
-   pip install "azure-ai-projects==2.1.0"
+   pip install "azure-ai-projects==2.3.0"
    pip install azure-identity
    pip install openai
    pip install python-dotenv
@@ -190,6 +190,7 @@ By the end of this lab, you will have:
 2. Add the following to the `.env` file, replacing the URL with your actual project endpoint:
    ```
    PROJECT_ENDPOINT="https://foundry-python-<yourname>.services.ai.azure.com/api/projects/python-agents-project"
+   MODEL_DEPLOYMENT_NAME="gpt-5.4"
    ```
 3. Save the file with `Ctrl+S`
 
@@ -210,7 +211,7 @@ In this step, you'll learn how to create and use a conversation with your agent 
 ### 5.1 Create and Use a Conversation
 1. In VS Code, create a new Python file:
    ```powershell
-   code conversation_agent.py
+   code agent.py
    ```
 2. Add the following code:
 
@@ -220,7 +221,8 @@ from azure.ai.projects import AIProjectClient
 from azure.ai.projects.models import (
     PromptAgentDefinition, 
     WebSearchTool, 
-    CodeInterpreterTool
+    CodeInterpreterTool,
+    AutoCodeInterpreterToolParam,
 )
 from dotenv import load_dotenv
 import os
@@ -230,7 +232,8 @@ load_dotenv()
 
 # Get project endpoint from environment
 PROJECT_ENDPOINT = os.getenv("PROJECT_ENDPOINT")
-MODEL_DEPLOYMENT = os.getenv("MODEL_DEPLOYMENT")
+MODEL_DEPLOYMENT_NAME = os.getenv("MODEL_DEPLOYMENT_NAME")
+AGENT_NAME = "python-multitool-agent"
 
 # Create project client
 project = AIProjectClient(
@@ -238,36 +241,46 @@ project = AIProjectClient(
     credential=DefaultAzureCredential(),
 )
 
+# Upload Sales.xlsx for the code interpreter to use
+sales_path = os.path.join(os.path.dirname(__file__), "..", "Sales.xlsx")
+with open(sales_path, "rb") as sales_file:
+    uploaded_file = project.get_openai_client().files.create(
+        purpose="assistants", file=sales_file
+    )
+print(f"✅ Uploaded Sales.xlsx (file ID: {uploaded_file.id})\n")
+
 print("=" * 60)
 print("STEP 1: CREATE AN AGENT WITH TOOLS")
 print("=" * 60)
 
 # Step 1: Create an agent with multiple tools
 agent = project.agents.create_version(
-    agent_name="python-multitool-agent",
+    agent_name=AGENT_NAME,
     definition=PromptAgentDefinition(
-        model=MODEL_DEPLOYMENT,
+        model=MODEL_DEPLOYMENT_NAME,
         instructions="""You are a versatile AI assistant with multiple capabilities:
         - Use web search for current information and real-time data
         - Use code interpreter for calculations, data analysis, and code execution
         - Provide clear and accurate answers
         - Cite sources when using web search""",
-        tools=[WebSearchTool(), CodeInterpreterTool()],
+        tools=[
+            WebSearchTool(),
+            CodeInterpreterTool(
+                container=AutoCodeInterpreterToolParam(file_ids=[uploaded_file.id])
+            ),
+        ],
     ),
 )
 
 print(f"✅ Agent created successfully!")
-print(f"Agent Name: {agent.name}")
+print(f"Agent Name: {AGENT_NAME}")
 print(f"Agent Version: {agent.version}")
 print(f"Tools: Web Search, Code Interpreter\n")
 
 
-# Create clients to call Foundry API
-project = AIProjectClient(
-    endpoint=PROJECT_ENDPOINT,
-    credential=DefaultAzureCredential(),
-)
-openai = project.get_openai_client()
+# Get an OpenAI client pre-bound to the specified agent
+openai = project.get_openai_client(agent_name=AGENT_NAME)
+
 
 print("=" * 60)
 print("STEP 2: CREATE A CONVERSATION")
@@ -286,7 +299,7 @@ response = openai.responses.create(
     conversation=conversation.id,  # Pass conversation ID
     extra_body={
         "agent_reference": {
-            "name": agent.name,
+            "name": AGENT_NAME,
             "type": "agent_reference",
         }
     },
@@ -304,7 +317,7 @@ follow_up = openai.responses.create(
     conversation=conversation.id,  # Same conversation ID maintains context
     extra_body={
         "agent_reference": {
-            "name": agent.name,
+            "name": AGENT_NAME,
             "type": "agent_reference",
         }
     },
@@ -322,7 +335,7 @@ calculation = openai.responses.create(
     conversation=conversation.id,  # Context from all previous turns
     extra_body={
         "agent_reference": {
-            "name": agent.name,
+            "name": AGENT_NAME,
             "type": "agent_reference",
         }
     },
@@ -330,10 +343,33 @@ calculation = openai.responses.create(
 )
 print(f"Status: {calculation.status}")
 print(f"User: Calculate the population density if the city area is 105 square kilometers.")
-print(f"Assistant: {calculation.output_text}")
+print(f"Assistant: {calculation.output_text}\n")
+
+# Fourth turn: analyze the uploaded Sales.xlsx file
+print("=" * 60)
+print("STEP 3-5: TURN 4 (Generate & Retrieve - Sales file insights)")
+print("=" * 60)
+sales_prompt = (
+    "Using the uploaded Sales.xlsx file, analyze the data with code interpreter "
+    "and give me key insights: total sales, top-performing categories, and any "
+    "notable trends."
+)
+sales_insights = openai.responses.create(
+    conversation=conversation.id,  # Context from all previous turns
+    extra_body={
+        "agent_reference": {
+            "name": AGENT_NAME,
+            "type": "agent_reference",
+        }
+    },
+    input=sales_prompt,
+)
+print(f"Status: {sales_insights.status}")
+print(f"User: {sales_prompt}")
+print(f"Assistant: {sales_insights.output_text}")
 print("=" * 60)
 ```
-> Note: You may copy the code from the agent.py file found in the Agents-Python folder if you want to skip typing it out manually.
+> Note: You may copy the code from the agent.py file found in the foundry-agents-lab folder of the repository if you want to skip typing it out manually.
 3. Save the file with `Ctrl+S`
 4. Run the script (it creates the multi-tool agent for you):
    ```powershell
