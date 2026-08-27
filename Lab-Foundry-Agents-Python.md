@@ -174,6 +174,7 @@ By the end of this lab, you will have:
    pip install azure-identity
    pip install openai
    pip install python-dotenv
+   pip install httpx
    ```
 
 ### 4.5 Get Your Project Endpoint
